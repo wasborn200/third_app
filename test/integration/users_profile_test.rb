@@ -18,9 +18,15 @@ class UsersProfileTest < ActionDispatch::IntegrationTest
     @user.microposts.paginate(page: 1).each do |micropost|
       assert_match micropost.content, response.body
     end
+    # Micropost Search
+    get user_path(@user), params: {q: {content_cont: "a"} }
+    q = @user.microposts.ransack(content_cont: "a")
+    q.result.paginate(page:1).each do |micropost|
+      assert_match micropost.content, response.body
+    end
   end
 
-  test "home display when not logged in" do
+  test "home display" do
     log_in_as(@user)
     get root_path
     assert_template 'static_pages/home'
@@ -29,11 +35,13 @@ class UsersProfileTest < ActionDispatch::IntegrationTest
     assert_select 'a>img.gravatar'
     assert_match @user.microposts.count.to_s, response.body
     assert_select 'div.pagination'
-    # フィード実装したらエラーが出るようになった　修正の必要あり
-    # @user.microposts.paginate(page: 1).each do |micropost|
-    #   assert_match micropost.content, response.body
-    # end
     assert_match @user.following.count.to_s, response.body
     assert_match @user.followers.count.to_s, response.body
+    # Micropost Search
+    get root_path prams: {q: {content_cont: "a"} }
+    q = @user.feed.ransack(content_cont: "a")
+    q.result.paginate(page: 1).each do |micropost|
+      assert_match CGI.escapeHTML(micropost.content), response.body
+    end
   end
 end
